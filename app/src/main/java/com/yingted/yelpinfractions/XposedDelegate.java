@@ -50,23 +50,16 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         return null;
     }
     protected final void addInfractionsView(RelativeLayout parent, View fixture, Object business) throws Throwable {
-        debug("Item: " + business);
         final String id = (String)businessGetId.invoke(business);
-        debug("Id: " + id);
         debug("addInfractionsView: " + id + ": " + parent + " " + fixture);
-        // XXX do injection
+        ;
     }
     protected final boolean addInfractionsView(ListView listView, Object business) throws Throwable {
         if (listView.getChildCount() <= 0)
             return false;
-        final View topView = listView.getChildAt(0);
-        debug("top view: " + topView);
         final RelativeLayout headerView = findStrictDescendant(listView, RelativeLayout.class);
-        debug("Header view: " + headerView);
         final RelativeLayout detailsView = findStrictDescendant(headerView, RelativeLayout.class);
-        debug("Details view: " + detailsView);
         final RelativeLayout ratingsView = findStrictDescendant(detailsView, RelativeLayout.class);
-        debug("Ratings view: " + ratingsView);
         addInfractionsView(detailsView, ratingsView, business);
         return true;
     }
@@ -87,7 +80,6 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 log("Adding infractions to business page");
                 final Object thiz = param.thisObject;
-                debug("thiz: " + thiz);
                 final Bundle bundle = (Bundle) param.args[0];
                 final Activity activity;
                 final Bundle arguments;
@@ -102,14 +94,10 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     return;
                 final Object business = arguments.getParcelable("extra.business");
                 final View root = activity.getWindow().getDecorView().getRootView();
-                debug("Root view: " + root);
                 final ListView listView = findDescendant(root, ListView.class);
-                debug("List view: " + listView);
-                debug("view count: " + listView.getChildCount());
                 if (addInfractionsView(listView, business))
                     return;
                 final Adapter adapter = listView.getAdapter();
-                debug("adapter: " + adapter);
                 final AtomicReference<DataSetObserver> observerReference = new AtomicReference<>();
                 final DataSetObserver observer = new DataSetObserver() {
                     @Override
@@ -135,19 +123,9 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 log("Adding infractions to business search result");
                 final Object result = param.getResult();
-                if (!(result instanceof RelativeLayout)) {
-                    debug("Not a relative layout");
-                    return;
-                }
                 final RelativeLayout group = (RelativeLayout)result;
-                debug("Created business search item view: " + group);
                 int position = (Integer)param.args[0];
-                debug("Position: " + position);
                 final Object thiz = param.thisObject;
-                if (!(thiz instanceof Adapter)) {
-                    debug("Not an adapter: " + thiz);
-                    return;
-                }
                 final Adapter adapter = (Adapter)thiz;
                 final Object business = adapter.getItem(position);
                 final int width = group.getWidth();
