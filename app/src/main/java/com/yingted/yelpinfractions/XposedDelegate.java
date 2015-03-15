@@ -2,9 +2,14 @@ package com.yingted.yelpinfractions;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Intent;
+import android.database.DataSetObservable;
+import android.database.DataSetObserver;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 
@@ -20,6 +25,13 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * Created by ted on 3/14/15.
  */
 public class XposedDelegate implements IXposedHookLoadPackage {
+
+    private Class<?> fragmentClass;
+    private Method fragmentGetActivityMethod;
+    private Method fragmentGetArgumentsMethod;
+    private Class<?> businessClass;
+    private Method businessGetId;
+
     protected final <ViewClass extends View> ViewClass findDescendant(View view, Class<ViewClass> cls) {
         if (cls.isInstance(view))
             return cls.cast(view);
@@ -36,17 +48,34 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         }
         return null;
     }
-    protected final void addInfractionsView(RelativeLayout parent, View fixture) {
-        debug("addInfractionsView: " + parent + " " + fixture);
+    protected final void addInfractionsView(RelativeLayout parent, View fixture, Object business) throws Throwable {
+        debug("Item: " + business);
+        final String id = (String)businessGetId.invoke(business);
+        debug("Id: " + id);
+        debug("addInfractionsView: " + id + ": " + parent + " " + fixture);
+    }
+    protected final void addInfractionsView(ListView listView, Object business) throws Throwable {
+        final View topView = listView.getChildAt(0);
+        debug("top view: " + topView);
+        final RelativeLayout headerView = findStrictDescendant(listView, RelativeLayout.class);
+        debug("Header view: " + headerView);
+        final RelativeLayout detailsView = findStrictDescendant(headerView, RelativeLayout.class);
+        debug("Details view: " + detailsView);
+        final RelativeLayout ratingsView = findStrictDescendant(detailsView, RelativeLayout.class);
+        debug("Ratings view: " + ratingsView);
+        addInfractionsView(detailsView, ratingsView, business);
     }
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam pkg) throws Throwable {
         if (!"com.yelp.android".equals(pkg.packageName))
             return;
-        log("Finding Fragment#getActivity");
-        final Class<?> fragmentClass = pkg.classLoader.loadClass("android.support.v4.app.Fragment");
-        final Method fragmentGetActivityMethod = fragmentClass.getDeclaredMethod("getActivity");
+        log("Finding methods");
+        fragmentClass = pkg.classLoader.loadClass("android.support.v4.app.Fragment");
+        fragmentGetActivityMethod = fragmentClass.getDeclaredMethod("getActivity");
+        fragmentGetArgumentsMethod = fragmentClass.getDeclaredMethod("getArguments");
+        businessClass = pkg.classLoader.loadClass("com.yelp.android.serializable.YelpBusiness");
+        businessGetId = businessClass.getDeclaredMethod("getYelpRequestId");
         log("Installing hooks");
         findAndHookMethod("com.yelp.android.ui.activities.businesspage.BusinessPageFragment", pkg.classLoader, "onActivityCreated", Bundle.class, new XC_MethodHook() {
             @Override
@@ -56,23 +85,36 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 debug("thiz: " + thiz);
                 final Bundle bundle = (Bundle) param.args[0];
                 final Activity activity;
-                if (thiz instanceof Fragment)
-                    activity = ((Fragment) thiz).getActivity();
-                else if (fragmentClass.isInstance(thiz))
-                    activity = (Activity)fragmentGetActivityMethod.invoke(thiz);
-                else
+                final Bundle arguments;
+                if (thiz instanceof Fragment) {
+                    Fragment fragment = (Fragment) thiz;
+                    activity = fragment.getActivity();
+                    arguments = fragment.getArguments();
+                } else if (fragmentClass.isInstance(thiz)) {
+                    activity = (Activity) fragmentGetActivityMethod.invoke(thiz);
+                    arguments = (Bundle) fragmentGetArgumentsMethod.invoke(thiz);
+                } else
                     return;
+                final Object business = arguments.getParcelable("extra.business");
                 final View root = activity.getWindow().getDecorView().getRootView();
                 debug("Root view: " + root);
                 final ListView listView = findDescendant(root, ListView.class);
                 debug("List view: " + listView);
-                final RelativeLayout headerView = findStrictDescendant(listView, RelativeLayout.class);
-                debug("Header view: " + headerView);
-                final RelativeLayout detailsView = findStrictDescendant(headerView, RelativeLayout.class);
-                debug("Details view: " + detailsView);
-                final RelativeLayout ratingsView = findStrictDescendant(detailsView, RelativeLayout.class);
-                debug("Ratings view: " + ratingsView);
-                addInfractionsView(detailsView, ratingsView);
+                debug("view count: " + listView.getChildCount());
+                if (listView.getChildCount() > 0)
+                    addInfractionsView(listView, business);
+                final Adapter adapter = listView.getAdapter();
+                debug("adapter: " + adapter);
+                adapter.registerDataSetObserver(new DataSetObserver() {
+                    @Override
+                    public void onChanged() {
+                        debug("onChanged");
+                    }
+                    @Override
+                    public void onInvalidated() {
+                        debug("onInvalidated");
+                    }
+                });
             }
         });
         findAndHookMethod("com.yelp.android.ui.panels.businesssearch.BusinessAdapter", pkg.classLoader, "getView", int.class, View.class, ViewGroup.class, new XC_MethodHook() {
@@ -86,6 +128,15 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 }
                 final RelativeLayout group = (RelativeLayout)result;
                 debug("Created business search item view: " + group);
+                int position = (Integer)param.args[0];
+                debug("Position: " + position);
+                final Object thiz = param.thisObject;
+                if (!(thiz instanceof Adapter)) {
+                    debug("Not an adapter: " + thiz);
+                    return;
+                }
+                final Adapter adapter = (Adapter)thiz;
+                final Object business = adapter.getItem(position);
                 final int width = group.getWidth();
                 int maxBottom = 0;
                 View lowest = null;
@@ -103,7 +154,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     debug("No fixture to hang view from");
                     return;
                 }
-                addInfractionsView(group, lowest);
+                addInfractionsView(group, lowest, business);
             }
         });
     }
