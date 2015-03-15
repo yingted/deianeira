@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.database.DataSetObserver;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +13,19 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -66,29 +79,64 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         updateInfractionsView(view, id);
     }
 
+    private final OkHttpClient client = new OkHttpClient();
     private final void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
         view.setTextColor(0);
-        debug("Get colour for " + id);
-        view.setText("o");
-        view.setTextColor(Color.GREEN);
+        view.post(new Runnable() {
+            @Override
+            public void run() {
+                debug("Get colour for " + id);
+                final String url;
+                try {
+                    url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
+                } catch (final UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                final Request request = new Request.Builder()
+                        .url(url)
+                        .build();
+                client.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(Request request, IOException e) {
+                        e.printStackTrace();
+                    }
+                    @Override
+                    public void onResponse(Response response) throws IOException {
+                        final String data = response.body().string();
+                        final JSONObject obj;
+                        try {
+                            obj = new JSONObject(data);
+                        } catch (final JSONException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                        final String text = obj.optString("text");
+                        final int color = obj.optInt("color");
+                        view.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                view.setText(text);
+                                view.setTextColor(color);
+                            }
+                        });
+                    }
+                });
+            }
+        });
     }
-
     private final TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
-        debug("addInfractionsView: " + parent + " " + fixture);
         final TextView view = new TextView(parent.getContext());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
         final int fixtureId = fixture.getId();
-        debug("fixture id: " + fixtureId);
         lp.addRule(RelativeLayout.BELOW, fixtureId);
         lp.addRule(RelativeLayout.ALIGN_RIGHT, fixtureId);
-        int viewId = Integer.MIN_VALUE;
+        int viewId = Integer.MAX_VALUE;
         for (int i = 0, len = parent.getChildCount(); i < len; ++i) {
             final View child = parent.getChildAt(i);
-            debug("child id: " + child.getId());
-            viewId = Math.max(viewId, child.getId() + 1);
+            viewId = Math.min(viewId, child.getId() - 1000000);
         }
-        debug("view id: " + viewId);
         view.setId(viewId);
         parent.addView(view, lp);
         return view;
@@ -118,7 +166,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         findAndHookMethod("com.yelp.android.ui.activities.businesspage.BusinessPageFragment", pkg.classLoader, "onActivityCreated", Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                log("Adding infractions to business page");
+                debug("Adding infractions to business page");
                 final Object thiz = param.thisObject;
                 final Bundle bundle = (Bundle) param.args[0];
                 final Activity activity;
@@ -145,7 +193,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         try {
                             if (setInfractionsView(listView, business))
                                 adapter.unregisterDataSetObserver(observerReference.get());
-                        } catch (Throwable e) {
+                        } catch (final Throwable e) {
                             e.printStackTrace();
                         }
                     }
@@ -162,7 +210,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         findAndHookMethod("com.yelp.android.ui.panels.businesssearch.BusinessAdapter", pkg.classLoader, "getView", int.class, View.class, ViewGroup.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                log("Adding infractions to business search result");
+                debug("Adding infractions to business search result");
                 final RelativeLayout group = (RelativeLayout) param.getResult();
                 final int position = (Integer) param.args[0];
                 final Object thiz = param.thisObject;
@@ -172,12 +220,10 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     @Override
                     public void run() {
                         final int width = group.getWidth();
-                        debug("width: " + width);
                         int maxBottom = 0;
                         View lowest = null;
                         for (int i = 0, len = group.getChildCount(); i < len; ++i) {
                             final View child = group.getChildAt(i);
-                            debug("child: " + child + ", left=" + child.getLeft());
                             if (child.getLeft() * 2 < width)
                                 continue;
                             final int childBottom = child.getBottom();
@@ -185,7 +231,6 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                                 maxBottom = childBottom;
                                 lowest = child;
                             }
-                            debug("childBottom: " + childBottom + "; maxBottom: " + maxBottom);
                         }
                         if (lowest == null) {
                             debug("No fixture to hang view from");
@@ -193,7 +238,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         }
                         try {
                             setInfractionsView(group, lowest, business);
-                        } catch (Throwable e) {
+                        } catch (final Throwable e) {
                             e.printStackTrace();
                         }
                     }
