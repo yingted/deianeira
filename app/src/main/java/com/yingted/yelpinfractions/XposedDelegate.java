@@ -29,7 +29,6 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -42,7 +41,7 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 /**
  * Created by ted on 3/14/15.
  */
-public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
+public class XposedDelegate implements IXposedHookLoadPackage {
 
     private Class<?> fragmentClass;
     private Method fragmentGetActivityMethod;
@@ -89,7 +88,6 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
         boolean html;
     }
     private List<Infraction> pendingInfractions = makePendingInfractions();
-    private final AtomicInteger pendingRequests = new AtomicInteger();
     private final void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
         view.setTextColor(0);
@@ -99,87 +97,76 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
         final boolean needPost = pendingInfractions.isEmpty();
         pendingInfractions.add(infraction);
         if (needPost)
-            view.post(this);
-    }
+            view.post(new Runnable() {
+                @Override
+                public void run() {
+                    final List<Infraction> infractions = pendingInfractions;
+                    pendingInfractions = makePendingInfractions();
 
-    @Override
-    public void run() {
-        final List<Infraction> infractions = pendingInfractions;
-        pendingInfractions = makePendingInfractions();
-
-        if (infractions.isEmpty())
-            return;
-        final View view = infractions.get(0).view;
-
-        final Request request;
-        {
-            final JSONArray query = new JSONArray();
-            try {
-                for (int i = 0, len = infractions.size(); i < len; ++i)
-                    query.put(i, infractions.get(i).id);
-            } catch (final JSONException e) {
-                XposedBridge.log(e);
-                return;
-            }
-            final String json = query.toString();
-            final String url;
-            try {
-                url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(json, "UTF-8");
-            } catch (final UnsupportedEncodingException e) {
-                XposedBridge.log(e);
-                return;
-            }
-            request = new Request.Builder()
-                    .url(url)
-                    .build();
-        }
-
-        if (!pendingRequests.compareAndSet(0, 1))
-            return;
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Request request, IOException e) {
-                XposedBridge.log(e);
-                assert pendingRequests.get() == 1;
-                if (pendingRequests.decrementAndGet() == 0)
-                    view.post(XposedDelegate.this);
-            }
-
-            @Override
-            public void onResponse(Response response) throws IOException {
-                final String data = response.body().string();
-                try {
-                    final JSONArray array = new JSONArray(data);
-                    for (int i = 0, len = infractions.size(); i < len; ++i) {
-                        final Infraction infraction = infractions.get(i);
-                        final JSONObject obj = array.getJSONObject(i);
-                        final String text = obj.optString("text");
-                        infraction.color = obj.optInt("color");
-                        if (infraction.html = obj.optBoolean("html"))
-                            infraction.text = Html.fromHtml(text);
-                        else
-                            infraction.text = text;
-                    }
-                } catch (final JSONException e) {
-                    XposedBridge.log(e);
-                    return;
-                }
-                view.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (final Infraction infraction : infractions) {
-                            final TextView view = infraction.view;
-                            view.setText(infraction.text);
-                            view.setTextColor(infraction.color);
-                            if (infraction.html)
-                                view.setMovementMethod(LinkMovementMethod.getInstance());
+                    final Request request;
+                    {
+                        final JSONArray query = new JSONArray();
+                        try {
+                            for (int i = 0, len = infractions.size(); i < len; ++i)
+                                query.put(i, infractions.get(i).id);
+                        } catch (final JSONException e) {
+                            XposedBridge.log(e);
+                            return;
                         }
-                        if (pendingRequests.decrementAndGet() == 0)
-                            XposedDelegate.this.run();
+                        final String json = query.toString();
+                        final String url;
+                        try {
+                            url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(json, "UTF-8");
+                        } catch (final UnsupportedEncodingException e) {
+                            XposedBridge.log(e);
+                            return;
+                        }
+                        request = new Request.Builder()
+                            .url(url)
+                            .build();
                     }
-                });
-            }
-        });
+
+                    client.newCall(request).enqueue(new Callback() {
+                        @Override
+                        public void onFailure(Request request, IOException e) {
+                            XposedBridge.log(e);
+                        }
+
+                        @Override
+                        public void onResponse(Response response) throws IOException {
+                            final String data = response.body().string();
+                            try {
+                                final JSONArray array = new JSONArray(data);
+                                for (int i = 0, len = infractions.size(); i < len; ++i) {
+                                    final Infraction infraction = infractions.get(i);
+                                    final JSONObject obj = array.getJSONObject(i);
+                                    final String text = obj.optString("text");
+                                    infraction.color = obj.optInt("color");
+                                    if (infraction.html = obj.optBoolean("html"))
+                                        infraction.text = Html.fromHtml(text);
+                                    else
+                                        infraction.text = text;
+                                }
+                            } catch (final JSONException e) {
+                                XposedBridge.log(e);
+                                return;
+                            }
+                            view.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    for (final Infraction infraction : infractions) {
+                                        final TextView view = infraction.view;
+                                        view.setText(infraction.text);
+                                        view.setTextColor(infraction.color);
+                                        if (infraction.html)
+                                            view.setMovementMethod(LinkMovementMethod.getInstance());
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
     }
 
     private static ArrayList<Infraction> makePendingInfractions() {
