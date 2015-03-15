@@ -151,6 +151,10 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         }
         return infraction;
     }
+    private void getInfractions(final Collection<String> ids) {
+        for (final String id : ids)
+            getInfraction(id);
+    }
     private void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
         view.setTextColor(0);
@@ -158,7 +162,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         infraction.when(new Runnable() {
             @Override
             public void run() {
-                view.post(new Runnable() {
+                post(view, new Runnable() {
                     @Override
                     public void run() {
                         view.setText(infraction.text);
@@ -186,14 +190,24 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         return view;
     }
 
-    protected final boolean setInfractionsView(final ListView listView, final Object business) throws Throwable {
-        if (listView.getChildCount() <= 0)
-            return false;
+    protected final void setInfractionsView(final ListView listView, final Object business) throws Throwable {
+        if (listView.getChildCount() <= 0) {
+            listView.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        setInfractionsView(listView, business);
+                    } catch (final Throwable e) {
+                        XposedBridge.log(e);
+                    }
+                }
+            });
+            return;
+        }
         final RelativeLayout headerView = findStrictDescendant(listView, RelativeLayout.class);
         final RelativeLayout detailsView = findStrictDescendant(headerView, RelativeLayout.class);
         final RelativeLayout ratingsView = findStrictDescendant(detailsView, RelativeLayout.class);
         setInfractionsView(detailsView, ratingsView, business);
-        return true;
     }
 
     @Override
@@ -226,28 +240,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 final Object business = arguments.getParcelable("extra.business");
                 final View root = activity.getWindow().getDecorView().getRootView();
                 final ListView listView = findDescendant(root, ListView.class);
-                if (setInfractionsView(listView, business))
-                    return;
-                final Adapter adapter = listView.getAdapter();
-                final AtomicReference<DataSetObserver> observerReference = new AtomicReference<>();
-                final DataSetObserver observer = new DataSetObserver() {
-                    @Override
-                    public void onChanged() {
-                        try {
-                            if (setInfractionsView(listView, business))
-                                adapter.unregisterDataSetObserver(observerReference.get());
-                        } catch (final Throwable e) {
-                            XposedBridge.log(e);
-                        }
-                    }
-
-                    @Override
-                    public void onInvalidated() {
-                        onChanged();
-                    }
-                };
-                observerReference.set(observer);
-                adapter.registerDataSetObserver(observer);
+                setInfractionsView(listView, business);
             }
         });
         findAndHookMethod("com.yelp.android.ui.panels.businesssearch.BusinessAdapter", pkg.classLoader, "getView", int.class, View.class, ViewGroup.class, new XC_MethodHook() {
@@ -260,7 +253,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 final Adapter adapter = (Adapter) thiz;
                 preloadAdapter(adapter, (View) param.args[2]);
                 final Object business = adapter.getItem(position);
-                group.post(new Runnable() {
+                post(group, new Runnable() {
                     @Override
                     public void run() {
                         final int width = group.getWidth();
@@ -291,16 +284,17 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         });
     }
     WeakHashMap<View, Boolean> seenViews = new WeakHashMap<>();
-    Collection<String> idsToPreload = makeIdsToPreload();
     protected void preloadAdapter(final Adapter adapter, final View view) throws Throwable {
         if (seenViews.get(view) != null)
             return;
         seenViews.put(view, true);
+        final Collection<String> ids = new ArrayList<>();
         for (int i = 0, len = adapter.getCount(); i < len; ++i) {
             final String id = (String) businessGetId.invoke(adapter.getItem(i));
-            getInfraction(id);
+            ids.add(id);
         }
-        view.post(new Runnable() {
+        getInfractions(ids);
+        post(view, new Runnable() {
             @Override
             public void run() {
                 seenViews.remove(view);
@@ -308,8 +302,9 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         });
     }
 
-    private static ArrayList<String> makeIdsToPreload() {
-        return new ArrayList<>();
+    protected static void post(final View view, final Runnable runnable) {
+        if (!view.post(runnable))
+            log("Warning: view post failed");
     }
 
     protected static void log(final String message) {
