@@ -15,8 +15,10 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
 import org.json.JSONArray;
@@ -151,9 +153,60 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         }
         return infraction;
     }
-    private void getInfractions(final Collection<String> ids) {
-        for (final String id : ids)
-            getInfraction(id);
+    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    final String endpoint = "https://www.yingted.com/static/test.json";
+    private List<Infraction> getInfractions(final List<String> ids) throws Throwable {
+        final List<Infraction> infractions = new ArrayList<>(ids.size());
+        final JSONArray query = new JSONArray();
+        final int[] infractionIndex = new int[ids.size()]; // big enough
+        {
+            for (int i = 0, j = 0, len = ids.size(); i < len; ++i) {
+                final String id = ids.get(i);
+                Infraction infraction = infractionsCache.get(id);
+                if (infraction == null) {
+                    infraction = new Infraction();
+                    infraction.id = id;
+                    infractionsCache.put(id, infraction);
+                    infractionIndex[j] = i;
+                    query.put(j++, id);
+                }
+                infractions.set(i, infraction);
+            }
+        }
+        final String json = query.toString();
+        final RequestBody body = RequestBody.create(JSON, json);
+        final Request request = new Request.Builder()
+                .url(endpoint)
+                .post(body)
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                XposedBridge.log(e);
+            }
+            @Override
+            public void onResponse(Response response) throws IOException {
+                final String data = response.body().string();
+                try {
+                    final JSONArray array = new JSONArray(data);
+                    // assert query.length() == array.length();
+                    for (int i = 0, len = query.length(); i < len; ++i) {
+                        final JSONObject obj = array.getJSONObject(i);
+                        final Infraction infraction = infractions.get(infractionIndex[i]);
+                        final String textString = obj.optString("text");
+                        infraction.color = obj.optInt("color");
+                        if (infraction.html = obj.optBoolean("html"))
+                            infraction.text = Html.fromHtml(textString);
+                        else
+                            infraction.text = textString;
+                        infraction.complete();
+                    }
+                } catch (final JSONException e) {
+                    XposedBridge.log(e);
+                }
+            }
+        });
+        return infractions;
     }
     private void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
@@ -288,7 +341,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         if (seenViews.get(view) != null)
             return;
         seenViews.put(view, true);
-        final Collection<String> ids = new ArrayList<>();
+        final List<String> ids = new ArrayList<>();
         for (int i = 0, len = adapter.getCount(); i < len; ++i) {
             final String id = (String) businessGetId.invoke(adapter.getItem(i));
             ids.add(id);
