@@ -18,6 +18,7 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -25,6 +26,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -77,60 +80,102 @@ public class XposedDelegate implements IXposedHookLoadPackage {
     }
 
     private final OkHttpClient client = new OkHttpClient();
+    private final class Infraction {
+        TextView view;
+        String id;
+        int color;
+        CharSequence text;
+        boolean html;
+    }
+    private List<Infraction> pendingInfractions = makePendingInfractions();
     private final void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
         view.setTextColor(0);
-        view.post(new Runnable() {
-            @Override
-            public void run() {
-                debug("Get colour for " + id);
-                final String url;
-                try {
-                    url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
-                } catch (final UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                    return;
-                }
-                final Request request = new Request.Builder()
-                        .url(url)
-                        .build();
-                client.newCall(request).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Request request, IOException e) {
-                        e.printStackTrace();
-                    }
-                    @Override
-                    public void onResponse(Response response) throws IOException {
-                        final String data = response.body().string();
-                        final JSONObject obj;
+        final Infraction infraction = new Infraction();
+        infraction.view = view;
+        infraction.id = id;
+        final boolean needPost = pendingInfractions.isEmpty();
+        pendingInfractions.add(infraction);
+        if (needPost)
+            view.post(new Runnable() {
+                @Override
+                public void run() {
+                    final List<Infraction> infractions = pendingInfractions;
+                    pendingInfractions = makePendingInfractions();
+
+                    final Request request;
+                    {
+                        final JSONArray query = new JSONArray();
                         try {
-                            obj = new JSONObject(data);
+                            for (int i = 0, len = infractions.size(); i < len; ++i)
+                                query.put(i, infractions.get(i).id);
                         } catch (final JSONException e) {
                             e.printStackTrace();
                             return;
                         }
-                        final String textString = obj.optString("text");
-                        final int color = obj.optInt("color");
-                        final boolean html = obj.optBoolean("html");
-                        final CharSequence text;
-                        if (html)
-                            text = Html.fromHtml(textString);
-                        else
-                            text = textString;
-                        view.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                view.setText(text);
-                                view.setTextColor(color);
-                                if (html)
-                                    view.setMovementMethod(LinkMovementMethod.getInstance());
-                            }
-                        });
+                        final String json = query.toString();
+                        final String url;
+                        try {
+                            url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(json, "UTF-8");
+                        } catch (final UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                        request = new Request.Builder()
+                            .url(url)
+                            .build();
                     }
-                });
-            }
-        });
+
+                    client.newCall(request).enqueue(new Callback() {
+                        @Override
+                        public void onFailure(Request request, IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        @Override
+                        public void onResponse(Response response) throws IOException {
+                            final String data = response.body().string();
+                            try {
+                                //final JSONArray array = new JSONArray(data);
+final JSONArray array = new JSONArray();
+final JSONObject _obj = new JSONObject(data);
+while (array.length() < infractions.size())
+    array.put(array.length(), _obj);
+                                for (int i = 0, len = infractions.size(); i < len; ++i) {
+                                    final Infraction infraction = infractions.get(i);
+                                    final JSONObject obj = array.getJSONObject(i);
+                                    final String text = obj.optString("text");
+                                    infraction.color = obj.optInt("color");
+                                    if (infraction.html = obj.optBoolean("html"))
+                                        infraction.text = Html.fromHtml(text);
+                                    else
+                                        infraction.text = text;
+                                }
+                            } catch (final JSONException e) {
+                                e.printStackTrace();
+                                return;
+                            }
+                            view.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    for (final Infraction infraction : infractions) {
+                                        view.setText(infraction.text);
+                                        view.setTextColor(infraction.color);
+                                        if (infraction.html)
+                                            view.setMovementMethod(LinkMovementMethod.getInstance());
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
     }
+
+    private static ArrayList<Infraction> makePendingInfractions() {
+        return new ArrayList<>();
+    }
+
     private final TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
         final TextView view = new TextView(parent.getContext());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
