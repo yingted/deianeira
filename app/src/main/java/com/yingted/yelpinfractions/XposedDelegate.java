@@ -30,6 +30,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.WeakHashMap;
@@ -91,44 +92,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         int color;
         boolean html;
         volatile boolean finished;
-        protected void fetch() {
-            debug("Get colour for " + id);
-            final String url;
-            try {
-                url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
-            } catch (final UnsupportedEncodingException e) {
-                XposedBridge.log(e);
-                return;
-            }
-            final Request request = new Request.Builder()
-                    .url(url)
-                    .build();
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Request request, IOException e) {
-                    XposedBridge.log(e);
-                }
-                @Override
-                public void onResponse(Response response) throws IOException {
-                    final String data = response.body().string();
-                    final JSONObject obj;
-                    try {
-                        obj = new JSONArray(data).getJSONObject(0);
-                    } catch (final JSONException e) {
-                        XposedBridge.log(e);
-                        return;
-                    }
-                    final String textString = obj.optString("text");
-                    color = obj.optInt("color");
-                    html = obj.optBoolean("html");
-                    if (html)
-                        text = Html.fromHtml(textString);
-                    else
-                        text = textString;
-                    complete();
-                }
-            });
-        }
+
         protected void complete() {
             finished = true;
             for (final Runnable callback : callbacks)
@@ -143,15 +107,8 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         }
     }
     final LruCache<String, Infraction> infractionsCache = new LruCache<>(1024);
-    private Infraction getInfraction(final String id) {
-        Infraction infraction = infractionsCache.get(id);
-        if (infraction == null) {
-            infraction = new Infraction();
-            infraction.id = id;
-            infraction.fetch();
-            infractionsCache.put(id, infraction);
-        }
-        return infraction;
+    private Infraction getInfraction(final String id) throws Throwable {
+        return getInfractions(Arrays.asList(id)).get(0);
     }
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     final String endpoint = "https://www.yingted.com/static/test.json";
@@ -208,7 +165,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         });
         return infractions;
     }
-    private void updateInfractionsView(final TextView view, final String id) {
+    private void updateInfractionsView(final TextView view, final String id) throws Throwable {
         view.setText("");
         view.setTextColor(0);
         final Infraction infraction = getInfraction(id);
