@@ -192,7 +192,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
 
     protected final void setInfractionsView(final ListView listView, final Object business) throws Throwable {
         if (listView.getChildCount() <= 0) {
-            listView.post(new Runnable() {
+            post(listView, new Runnable() {
                 @Override
                 public void run() {
                     try {
