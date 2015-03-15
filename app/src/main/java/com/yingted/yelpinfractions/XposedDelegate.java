@@ -127,7 +127,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     infractionIndex[j] = i;
                     query.put(j++, id);
                 }
-                infractions.set(i, infraction);
+                infractions.add(infraction);
             }
         }
         final String json = query.toString();
