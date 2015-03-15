@@ -19,6 +19,7 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -80,7 +82,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
 
     private final OkHttpClient client = new OkHttpClient();
     private final class Infraction {
-        List<Runnable> callbacks;
+        List<Runnable> callbacks = new ArrayList<>();
         String id;
         CharSequence text;
         int color;
@@ -108,7 +110,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     final String data = response.body().string();
                     final JSONObject obj;
                     try {
-                        obj = new JSONObject(data);
+                        obj = new JSONArray(data).getJSONObject(0);
                     } catch (final JSONException e) {
                         XposedBridge.log(e);
                         return;
