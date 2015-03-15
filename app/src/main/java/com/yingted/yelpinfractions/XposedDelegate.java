@@ -110,8 +110,21 @@ public class XposedDelegate implements IXposedHookLoadPackage {
     private Infraction getInfraction(final String id) throws Throwable {
         return getInfractions(Arrays.asList(id)).get(0);
     }
+    /**
+     * We POST a JSON array of string ids to endpoint:
+     *   ["id1", "id2", "id3"]
+     * The response is a JSON array of objects:
+     *   [
+     *      {
+     *          text: "text to show", // default: ""
+     *          html: (whether text is html), // default: false
+     *          color: (color of text, as 0xRRGGBBAA int), // default: 0 = 0x00000000 (transparent black)
+     *      },
+     *      ...
+     *   ]
+     */
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    final String endpoint = "http://www.yingted.com:8000/test.json";
+    final String endpoint = "http://www.yingted.com:8000/test.json"; // TODO
     private List<Infraction> getInfractions(final List<String> ids) throws Throwable {
         final List<Infraction> infractions = new ArrayList<>(ids.size());
         final JSONArray query = new JSONArray();
