@@ -6,6 +6,7 @@ import android.database.DataSetObserver;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
+import android.util.LruCache;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Adapter;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -77,61 +79,95 @@ public class XposedDelegate implements IXposedHookLoadPackage {
     }
 
     private final OkHttpClient client = new OkHttpClient();
-    private final void updateInfractionsView(final TextView view, final String id) {
+    private final class Infraction {
+        List<Runnable> callbacks;
+        String id;
+        CharSequence text;
+        int color;
+        boolean html;
+        volatile boolean finished;
+        protected void fetch() {
+            debug("Get colour for " + id);
+            final String url;
+            try {
+                url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
+            } catch (final UnsupportedEncodingException e) {
+                XposedBridge.log(e);
+                return;
+            }
+            final Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+            client.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Request request, IOException e) {
+                    XposedBridge.log(e);
+                }
+                @Override
+                public void onResponse(Response response) throws IOException {
+                    final String data = response.body().string();
+                    final JSONObject obj;
+                    try {
+                        obj = new JSONObject(data);
+                    } catch (final JSONException e) {
+                        XposedBridge.log(e);
+                        return;
+                    }
+                    final String textString = obj.optString("text");
+                    color = obj.optInt("color");
+                    html = obj.optBoolean("html");
+                    if (html)
+                        text = Html.fromHtml(textString);
+                    else
+                        text = textString;
+                    complete();
+                }
+            });
+        }
+        protected void complete() {
+            finished = true;
+            for (final Runnable callback : callbacks)
+                callback.run();
+            callbacks.clear();
+        }
+        protected void when(Runnable runnable) {
+            if (finished)
+                runnable.run();
+            else
+                callbacks.add(runnable);
+        }
+    }
+    final LruCache<String, Infraction> infractionsCache = new LruCache<>(1024);
+    private Infraction getInfraction(final String id) {
+        Infraction infraction = infractionsCache.get(id);
+        if (infraction == null) {
+            infraction = new Infraction();
+            infraction.id = id;
+            infraction.fetch();
+            infractionsCache.put(id, infraction);
+        }
+        return infraction;
+    }
+    private void updateInfractionsView(final TextView view, final String id) {
         view.setText("");
         view.setTextColor(0);
-        view.post(new Runnable() {
+        final Infraction infraction = getInfraction(id);
+        infraction.when(new Runnable() {
             @Override
             public void run() {
-                debug("Get colour for " + id);
-                final String url;
-                try {
-                    url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
-                } catch (final UnsupportedEncodingException e) {
-                    XposedBridge.log(e);
-                    return;
-                }
-                final Request request = new Request.Builder()
-                        .url(url)
-                        .build();
-                client.newCall(request).enqueue(new Callback() {
+                view.post(new Runnable() {
                     @Override
-                    public void onFailure(Request request, IOException e) {
-                        XposedBridge.log(e);
-                    }
-                    @Override
-                    public void onResponse(Response response) throws IOException {
-                        final String data = response.body().string();
-                        final JSONObject obj;
-                        try {
-                            obj = new JSONObject(data);
-                        } catch (final JSONException e) {
-                            XposedBridge.log(e);
-                            return;
-                        }
-                        final String textString = obj.optString("text");
-                        final int color = obj.optInt("color");
-                        final boolean html = obj.optBoolean("html");
-                        final CharSequence text;
-                        if (html)
-                            text = Html.fromHtml(textString);
-                        else
-                            text = textString;
-                        view.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                view.setText(text);
-                                view.setTextColor(color);
-                                if (html)
-                                    view.setMovementMethod(LinkMovementMethod.getInstance());
-                            }
-                        });
+                    public void run() {
+                        view.setText(infraction.text);
+                        view.setTextColor(infraction.color);
+                        if (infraction.html)
+                            view.setMovementMethod(LinkMovementMethod.getInstance());
                     }
                 });
             }
         });
     }
-    private final TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
+    private TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
         final TextView view = new TextView(parent.getContext());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
         final int fixtureId = fixture.getId();
