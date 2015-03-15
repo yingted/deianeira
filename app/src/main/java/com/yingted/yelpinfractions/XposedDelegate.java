@@ -136,7 +136,11 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         public void onResponse(Response response) throws IOException {
                             final String data = response.body().string();
                             try {
-                                final JSONArray array = new JSONArray(data);
+                                //final JSONArray array = new JSONArray(data);
+final JSONArray array = new JSONArray();
+final JSONObject _obj = new JSONObject(data);
+while (array.length() < infractions.size())
+    array.put(array.length(), _obj);
                                 for (int i = 0, len = infractions.size(); i < len; ++i) {
                                     final Infraction infraction = infractions.get(i);
                                     final JSONObject obj = array.getJSONObject(i);
