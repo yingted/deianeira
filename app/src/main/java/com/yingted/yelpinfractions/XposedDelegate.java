@@ -88,7 +88,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 try {
                     url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(id, "UTF-8");
                 } catch (final UnsupportedEncodingException e) {
-                    e.printStackTrace();
+                    XposedBridge.log(e);
                     return;
                 }
                 final Request request = new Request.Builder()
@@ -97,7 +97,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 client.newCall(request).enqueue(new Callback() {
                     @Override
                     public void onFailure(Request request, IOException e) {
-                        e.printStackTrace();
+                        XposedBridge.log(e);
                     }
                     @Override
                     public void onResponse(Response response) throws IOException {
@@ -106,7 +106,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         try {
                             obj = new JSONObject(data);
                         } catch (final JSONException e) {
-                            e.printStackTrace();
+                            XposedBridge.log(e);
                             return;
                         }
                         final String textString = obj.optString("text");
@@ -198,7 +198,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                             if (setInfractionsView(listView, business))
                                 adapter.unregisterDataSetObserver(observerReference.get());
                         } catch (final Throwable e) {
-                            e.printStackTrace();
+                            XposedBridge.log(e);
                         }
                     }
 
@@ -219,6 +219,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 final int position = (Integer) param.args[0];
                 final Object thiz = param.thisObject;
                 final Adapter adapter = (Adapter) thiz;
+                // XXX preload adapter
                 final Object business = adapter.getItem(position);
                 group.post(new Runnable() {
                     @Override
@@ -243,7 +244,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         try {
                             setInfractionsView(group, lowest, business);
                         } catch (final Throwable e) {
-                            e.printStackTrace();
+                            XposedBridge.log(e);
                         }
                     }
                 });
