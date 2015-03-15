@@ -86,11 +86,11 @@ public class XposedDelegate implements IXposedHookLoadPackage {
 
     private final OkHttpClient client = new OkHttpClient();
     private final class Infraction {
-        List<Runnable> callbacks = new ArrayList<>();
-        String id;
-        CharSequence text;
-        int color;
-        boolean html;
+        final List<Runnable> callbacks = new ArrayList<>();
+        volatile String id;
+        volatile CharSequence text;
+        volatile int color;
+        volatile boolean html;
         volatile boolean finished;
 
         protected void complete() {
