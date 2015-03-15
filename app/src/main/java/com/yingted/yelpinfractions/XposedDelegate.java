@@ -110,7 +110,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                             for (int i = 0, len = infractions.size(); i < len; ++i)
                                 query.put(i, infractions.get(i).id);
                         } catch (final JSONException e) {
-                            XposedBridge.log(e);
+                            e.printStackTrace();
                             return;
                         }
                         final String json = query.toString();
@@ -118,7 +118,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         try {
                             url = "https://www.yingted.com/static/test.json?" + URLEncoder.encode(json, "UTF-8");
                         } catch (final UnsupportedEncodingException e) {
-                            XposedBridge.log(e);
+                            e.printStackTrace();
                             return;
                         }
                         request = new Request.Builder()
@@ -129,7 +129,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                     client.newCall(request).enqueue(new Callback() {
                         @Override
                         public void onFailure(Request request, IOException e) {
-                            XposedBridge.log(e);
+                            e.printStackTrace();
                         }
 
                         @Override
@@ -148,14 +148,13 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                                         infraction.text = text;
                                 }
                             } catch (final JSONException e) {
-                                XposedBridge.log(e);
+                                e.printStackTrace();
                                 return;
                             }
                             view.post(new Runnable() {
                                 @Override
                                 public void run() {
                                     for (final Infraction infraction : infractions) {
-                                        final TextView view = infraction.view;
                                         view.setText(infraction.text);
                                         view.setTextColor(infraction.color);
                                         if (infraction.html)
@@ -173,7 +172,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         return new ArrayList<>();
     }
 
-    private TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
+    private final TextView addInfractionsView(final RelativeLayout parent, final View fixture) {
         final TextView view = new TextView(parent.getContext());
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
         final int fixtureId = fixture.getId();
@@ -240,7 +239,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                             if (setInfractionsView(listView, business))
                                 adapter.unregisterDataSetObserver(observerReference.get());
                         } catch (final Throwable e) {
-                            XposedBridge.log(e);
+                            e.printStackTrace();
                         }
                     }
 
@@ -285,7 +284,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         try {
                             setInfractionsView(group, lowest, business);
                         } catch (final Throwable e) {
-                            XposedBridge.log(e);
+                            e.printStackTrace();
                         }
                     }
                 });
