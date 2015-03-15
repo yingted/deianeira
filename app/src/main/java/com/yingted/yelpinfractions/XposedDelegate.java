@@ -178,7 +178,6 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 debug("Adding infractions to business page");
                 final Object thiz = param.thisObject;
-                final Bundle bundle = (Bundle) param.args[0];
                 final Activity activity;
                 final Bundle arguments;
                 if (thiz instanceof Fragment) {
