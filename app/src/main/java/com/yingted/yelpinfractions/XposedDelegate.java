@@ -14,6 +14,7 @@ import android.widget.ListView;
 import android.widget.RelativeLayout;
 
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -53,8 +54,11 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         final String id = (String)businessGetId.invoke(business);
         debug("Id: " + id);
         debug("addInfractionsView: " + id + ": " + parent + " " + fixture);
+        // XXX do injection
     }
-    protected final void addInfractionsView(ListView listView, Object business) throws Throwable {
+    protected final boolean addInfractionsView(ListView listView, Object business) throws Throwable {
+        if (listView.getChildCount() <= 0)
+            return false;
         final View topView = listView.getChildAt(0);
         debug("top view: " + topView);
         final RelativeLayout headerView = findStrictDescendant(listView, RelativeLayout.class);
@@ -64,6 +68,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         final RelativeLayout ratingsView = findStrictDescendant(detailsView, RelativeLayout.class);
         debug("Ratings view: " + ratingsView);
         addInfractionsView(detailsView, ratingsView, business);
+        return true;
     }
 
     @Override
@@ -72,10 +77,10 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             return;
         log("Finding methods");
         fragmentClass = pkg.classLoader.loadClass("android.support.v4.app.Fragment");
-        fragmentGetActivityMethod = fragmentClass.getDeclaredMethod("getActivity");
-        fragmentGetArgumentsMethod = fragmentClass.getDeclaredMethod("getArguments");
+        fragmentGetActivityMethod = fragmentClass.getMethod("getActivity");
+        fragmentGetArgumentsMethod = fragmentClass.getMethod("getArguments");
         businessClass = pkg.classLoader.loadClass("com.yelp.android.serializable.YelpBusiness");
-        businessGetId = businessClass.getDeclaredMethod("getYelpRequestId");
+        businessGetId = businessClass.getMethod("getId");
         log("Installing hooks");
         findAndHookMethod("com.yelp.android.ui.activities.businesspage.BusinessPageFragment", pkg.classLoader, "onActivityCreated", Bundle.class, new XC_MethodHook() {
             @Override
@@ -101,20 +106,28 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 final ListView listView = findDescendant(root, ListView.class);
                 debug("List view: " + listView);
                 debug("view count: " + listView.getChildCount());
-                if (listView.getChildCount() > 0)
-                    addInfractionsView(listView, business);
+                if (addInfractionsView(listView, business))
+                    return;
                 final Adapter adapter = listView.getAdapter();
                 debug("adapter: " + adapter);
-                adapter.registerDataSetObserver(new DataSetObserver() {
+                final AtomicReference<DataSetObserver> observerReference = new AtomicReference<>();
+                final DataSetObserver observer = new DataSetObserver() {
                     @Override
                     public void onChanged() {
-                        debug("onChanged");
+                        try {
+                            if (addInfractionsView(listView, business))
+                                adapter.unregisterDataSetObserver(observerReference.get());
+                        } catch (Throwable e) {
+                            e.printStackTrace();
+                        }
                     }
                     @Override
                     public void onInvalidated() {
-                        debug("onInvalidated");
+                        onChanged();
                     }
-                });
+                };
+                observerReference.set(observer);
+                adapter.registerDataSetObserver(observer);
             }
         });
         findAndHookMethod("com.yelp.android.ui.panels.businesssearch.BusinessAdapter", pkg.classLoader, "getView", int.class, View.class, ViewGroup.class, new XC_MethodHook() {
