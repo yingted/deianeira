@@ -3,8 +3,6 @@ package com.yingted.yelpinfractions;
 import android.app.Activity;
 import android.app.Fragment;
 import android.database.DataSetObserver;
-import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
@@ -26,12 +24,9 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
-import java.net.URI;
 import java.net.URLEncoder;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.xml.transform.sax.TemplatesHandler;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
