@@ -130,6 +130,8 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 infractions.add(infraction);
             }
         }
+        if (query.length() == 0)
+            return infractions;
         final String json = query.toString();
         final RequestBody body = RequestBody.create(JSON, json);
         final Request request = new Request.Builder()
