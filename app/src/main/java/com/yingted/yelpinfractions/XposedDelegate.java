@@ -99,17 +99,34 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
         final boolean needPost = pendingInfractions.isEmpty();
         pendingInfractions.add(infraction);
         if (needPost)
-            view.post(this);
+            post(view, this);
+    }
+    private final void post(final View view, final Runnable runnable) {
+        ((Activity)view.getContext()).runOnUiThread(runnable);
     }
 
     @Override
     public void run() {
+        if (!pendingRequests.compareAndSet(0, 1))
+            return;
+
         final List<Infraction> infractions = pendingInfractions;
         pendingInfractions = makePendingInfractions();
 
         if (infractions.isEmpty())
             return;
-        final View view = infractions.get(0).view;
+        final View view;
+        {
+            View infractionView = null;
+            for (final Infraction infraction : infractions) {
+                infractionView = infraction.view;
+                if (infractionView.isAttachedToWindow())
+                    break;
+            }
+            if (infractionView == null)
+                return;
+            view = infractionView;
+        }
 
         final Request request;
         {
@@ -134,15 +151,13 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
                     .build();
         }
 
-        if (!pendingRequests.compareAndSet(0, 1))
-            return;
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Request request, IOException e) {
                 XposedBridge.log(e);
                 assert pendingRequests.get() == 1;
                 if (pendingRequests.decrementAndGet() == 0)
-                    view.post(XposedDelegate.this);
+                    post(view, XposedDelegate.this);
             }
 
             @Override
@@ -164,7 +179,7 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
                     XposedBridge.log(e);
                     return;
                 }
-                view.post(new Runnable() {
+                post(view, new Runnable() {
                     @Override
                     public void run() {
                         for (final Infraction infraction : infractions) {
@@ -275,7 +290,7 @@ public class XposedDelegate implements IXposedHookLoadPackage, Runnable {
                 final Object thiz = param.thisObject;
                 final Adapter adapter = (Adapter) thiz;
                 final Object business = adapter.getItem(position);
-                group.post(new Runnable() {
+                post(group, new Runnable() {
                     @Override
                     public void run() {
                         final int width = group.getWidth();
