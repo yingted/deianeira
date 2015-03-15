@@ -6,6 +6,8 @@ import android.database.DataSetObserver;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Adapter;
@@ -112,13 +114,21 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                             e.printStackTrace();
                             return;
                         }
-                        final String text = obj.optString("text");
+                        final String textString = obj.optString("text");
                         final int color = obj.optInt("color");
+                        final boolean html = obj.optBoolean("html");
+                        final CharSequence text;
+                        if (html)
+                            text = Html.fromHtml(textString);
+                        else
+                            text = textString;
                         view.post(new Runnable() {
                             @Override
                             public void run() {
                                 view.setText(text);
                                 view.setTextColor(color);
+                                if (html)
+                                    view.setMovementMethod(LinkMovementMethod.getInstance());
                             }
                         });
                     }
@@ -252,6 +262,6 @@ public class XposedDelegate implements IXposedHookLoadPackage {
     }
 
     protected static void debug(final String message) {
-        log(message);
+        //log(message);
     }
 }
