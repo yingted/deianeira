@@ -290,7 +290,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             }
         });
     }
-    WeakHashMap<View, Boolean> seenViews;
+    WeakHashMap<View, Boolean> seenViews = new WeakHashMap<>();
     Collection<String> idsToPreload = makeIdsToPreload();
     protected void preloadAdapter(final Adapter adapter, final View view) throws Throwable {
         if (seenViews.get(view) != null)
