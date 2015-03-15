@@ -116,7 +116,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         final List<Infraction> infractions = new ArrayList<>(ids.size());
         final JSONArray query = new JSONArray();
         final int[] infractionIndex = new int[ids.size()]; // big enough
-        {
+        synchronized (infractionsCache) {
             for (int i = 0, j = 0, len = ids.size(); i < len; ++i) {
                 final String id = ids.get(i);
                 Infraction infraction = infractionsCache.get(id);
@@ -140,6 +140,10 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             @Override
             public void onFailure(Request request, IOException e) {
                 XposedBridge.log(e);
+                synchronized (infractionsCache) {
+                    for (int i = 0, len = query.length(); i < len; ++i)
+                        infractionsCache.remove(infractions.get(infractionIndex[i]).id);
+                }
             }
             @Override
             public void onResponse(Response response) throws IOException {
