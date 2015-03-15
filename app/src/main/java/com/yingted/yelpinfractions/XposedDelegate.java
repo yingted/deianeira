@@ -111,7 +111,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         return getInfractions(Arrays.asList(id)).get(0);
     }
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    final String endpoint = "https://www.yingted.com/static/test.json";
+    final String endpoint = "http://www.yingted.com:8000/test.json";
     private List<Infraction> getInfractions(final List<String> ids) throws Throwable {
         final List<Infraction> infractions = new ArrayList<>(ids.size());
         final JSONArray query = new JSONArray();
