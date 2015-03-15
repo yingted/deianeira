@@ -28,6 +28,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -257,7 +258,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 final int position = (Integer) param.args[0];
                 final Object thiz = param.thisObject;
                 final Adapter adapter = (Adapter) thiz;
-                // XXX preload adapter
+                preloadAdapter(adapter, (View) param.args[2]);
                 final Object business = adapter.getItem(position);
                 group.post(new Runnable() {
                     @Override
@@ -288,6 +289,27 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 });
             }
         });
+    }
+    WeakHashMap<View, Boolean> seenViews;
+    Collection<String> idsToPreload = makeIdsToPreload();
+    protected void preloadAdapter(final Adapter adapter, final View view) throws Throwable {
+        if (seenViews.get(view) != null)
+            return;
+        seenViews.put(view, true);
+        for (int i = 0, len = adapter.getCount(); i < len; ++i) {
+            final String id = (String) businessGetId.invoke(adapter.getItem(i));
+            getInfraction(id);
+        }
+        view.post(new Runnable() {
+            @Override
+            public void run() {
+                seenViews.remove(view);
+            }
+        });
+    }
+
+    private static ArrayList<String> makeIdsToPreload() {
+        return new ArrayList<>();
     }
 
     protected static void log(final String message) {
