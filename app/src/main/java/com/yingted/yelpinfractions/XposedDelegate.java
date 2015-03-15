@@ -143,8 +143,8 @@ public class XposedDelegate implements IXposedHookLoadPackage {
             }
             @Override
             public void onResponse(Response response) throws IOException {
-                final String data = response.body().string();
                 try {
+                    final String data = response.body().string();
                     final JSONArray array = new JSONArray(data);
                     // assert query.length() == array.length();
                     for (int i = 0, len = query.length(); i < len; ++i) {
@@ -266,24 +266,24 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                 post(group, new Runnable() {
                     @Override
                     public void run() {
-                        final int width = group.getWidth();
-                        int maxBottom = 0;
-                        View lowest = null;
-                        for (int i = 0, len = group.getChildCount(); i < len; ++i) {
-                            final View child = group.getChildAt(i);
-                            if (child.getLeft() * 2 < width)
-                                continue;
-                            final int childBottom = child.getBottom();
-                            if (childBottom >= maxBottom) {
-                                maxBottom = childBottom;
-                                lowest = child;
-                            }
-                        }
-                        if (lowest == null) {
-                            debug("No fixture to hang view from");
-                            return;
-                        }
                         try {
+                            final int width = group.getWidth();
+                            int maxBottom = 0;
+                            View lowest = null;
+                            for (int i = 0, len = group.getChildCount(); i < len; ++i) {
+                                final View child = group.getChildAt(i);
+                                if (child.getLeft() * 2 < width)
+                                    continue;
+                                final int childBottom = child.getBottom();
+                                if (childBottom >= maxBottom) {
+                                    maxBottom = childBottom;
+                                    lowest = child;
+                                }
+                            }
+                            if (lowest == null) {
+                                debug("No fixture to hang view from");
+                                return;
+                            }
                             setInfractionsView(group, lowest, business);
                         } catch (final Throwable e) {
                             XposedBridge.log(e);
