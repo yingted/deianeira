@@ -6,7 +6,6 @@ class Server(object):
 	def __init__(self):
 		object.__init__(self)
 		self.matcher = match.Match()
-		print "CONNS:", self.matcher.conns
 
 	@cherrypy.expose
 	def index(self):
@@ -36,4 +35,5 @@ if __name__ == '__main__':
 	cherrypy.tools.CORS = cherrypy.Tool('before_finalize', CORS)
 	cherrypy.config.update({'tools.CORS.on': True,})
 	cherrypy.server.socket_host = '0.0.0.0'
+	cherrypy.server.socket_port = 8081
 	cherrypy.quickstart(Server())
