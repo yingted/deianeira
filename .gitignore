@@ -7,3 +7,5 @@ blueprint.py
 /.idea/libraries
 .DS_Store
 /build
+venv
+out
