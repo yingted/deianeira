@@ -12,13 +12,15 @@ class Match:
 	def get_obj(self, business_id):
 		if business_id in self.conns.keys():
 			ret = {
-				'text': self.conns[business_id], #'o',
+				'text': 'o', #self.conns[business_id], 
 				'html': False,
 				'color': int("0xff000000", 0)
 			}
 			return ret
 		else:
 			ret = {
-				'error': "Error, business_id {0} was not found.".format(business_id)
+				'test': '',
+				'html': False,
+				'color': int("0x00000000",0)
 			}
 			return ret
