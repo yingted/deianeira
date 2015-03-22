@@ -39,11 +39,11 @@ class Match:
 
 	def get_obj(self, raw_id):
 		try:
-			business_id = get_business_id(raw_id).decode("utf-8")
+			business_id = get_business_id(raw_id).encode("utf-8").decode("utf-8")
 		except Exception, e:
 			print "Exception:", e
 			business_id = ""
-		
+
 		if business_id in self.conns.keys():
 			uuid = self.conns[business_id]
 			infras = self.infractions[uuid]
