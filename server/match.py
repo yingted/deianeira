@@ -55,6 +55,8 @@ class Match:
 			return ret
 		else:
 			ret = {
-				'error': "Error, business_id {0} was not found.".format(business_id)
+				'test': '',
+				'html': False,
+				'color': green
 			}
 			return ret
