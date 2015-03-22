@@ -15,7 +15,11 @@ class Server(object):
 	#@cherrypy_cors.tools.expose()
 	@cherrypy.tools.json_out()
 	@cherrypy.tools.json_in(force=False)
-	def query(self, ids=[]):
+	def query(self):
+		try:
+			ids = cherrypy.request.json
+		except:
+			pass
 		print "IDs:", ids
 		ret = []
 
