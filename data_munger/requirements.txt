@@ -1,4 +1,0 @@
-BeautifulSoup==3.2.1
-mechanize==0.2.5
-rauth==0.7.1
-requests==2.6.0
