@@ -16,9 +16,9 @@ def get_business_id(business_id):
 	return data
 
 class Match:
-	green = int("0x00ff00ff", 0)
-	yellow = int("0xffff00ff", 0)
-	red = int("0xff0000ff", 0)
+	green = int("0x00ff00ff", 16)
+	yellow = int("0xffff00ff", 16)
+	red = int("0xff0000ff", 16)
 
 	def __init__(self):
 		conns_raw = open("../data_munger/matcher/conn.csv", "r")
