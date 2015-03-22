@@ -42,11 +42,11 @@ class Match:
 		if business_id in self.conns.keys():
 			uuid = self.conns[business_id]
 			infras = self.infractions[uuid]
-			color = green
+			color = self.green
 			if int(infras[-1]) > 0:
-				color = red
+				color = self.red
 			elif int(infras[-2]) > 0:
-				color = yellow
+				color = self.yellow
 			ret = {
 				'text': 'o',
 				'html': False,
@@ -57,6 +57,6 @@ class Match:
 			ret = {
 				'test': '',
 				'html': False,
-				'color': green
+				'color': self.green
 			}
 			return ret
