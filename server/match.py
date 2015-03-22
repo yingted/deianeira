@@ -41,7 +41,7 @@ class Match:
 		business_id = get_business_id(raw_id).decode("utf-8")
 		if business_id in self.conns.keys():
 			uuid = self.conns[business_id]
-			infras = self.infractions[uuid] e31c1c
+			infras = self.infractions[uuid]
 			color = green
 			if int(infras[-1]) > 0:
 				color = red
