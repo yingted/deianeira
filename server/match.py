@@ -38,7 +38,12 @@ class Match:
 		self.infractions = infra_dict
 
 	def get_obj(self, raw_id):
-		business_id = get_business_id(raw_id).decode("utf-8")
+		try:
+			business_id = get_business_id(raw_id).decode("utf-8")
+		except Exception, e:
+			print "Exception:", e
+			business_id = ""
+		
 		if business_id in self.conns.keys():
 			uuid = self.conns[business_id]
 			infras = self.infractions[uuid]
