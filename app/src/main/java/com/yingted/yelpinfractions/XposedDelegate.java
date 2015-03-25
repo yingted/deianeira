@@ -118,7 +118,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
      *      {
      *          text: "text to show", // default: ""
      *          html: (whether text is html), // default: false
-     *          color: (color of text, as 0xRRGGBBAA int), // default: 0 = 0x00000000 (transparent black)
+     *          color: (color of text, as 0xAARRGGBB int), // default: 0 = 0x00000000 (transparent black)
      *      },
      *      ...
      *   ]
