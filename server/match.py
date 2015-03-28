@@ -16,9 +16,9 @@ def get_business_id(business_id):
 	return data
 
 class Match:
-	green = int("0x00ff00ff", 16)
-	yellow = int("0xffff00ff", 16)
-	red = int("0xff0000ff", 16)
+	green = 0xff99cc00
+	yellow = 0xffffbb33
+	red = 0xffff4444
 
 	def __init__(self):
 		conns_raw = open("../data_munger/matcher/conn.csv", "r")
@@ -48,20 +48,24 @@ class Match:
 			uuid = self.conns[business_id]
 			infras = self.infractions[uuid]
 			color = self.green
+			text = u'\U0001f604'.encode('utf-8')
 			if int(infras[-1]) > 0:
+				text = u'\U0001f631'.encode('utf-8')
 				color = self.red
 			elif int(infras[-2]) > 0:
+				text = u'\U0001f628'.encode('utf-8')
 				color = self.yellow
 			ret = {
-				'text': 'o',
-				'html': False,
-				'color': color
+				'text': "<a href='http://www.google.com/'>{0}</a>".format(text),
+				'html': True,
+				'color': 0 
 			}
 			return ret
 		else:
+			text = u'\U0001f610'.encode('utf-8')
 			ret = {
-				'test': '',
+				'text': text,
 				'html': False,
-				'color': self.green
+				'color': 0xff000000 
 			}
 			return ret

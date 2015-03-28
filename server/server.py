@@ -13,14 +13,14 @@ class Server(object):
 
 	@cherrypy.expose
 	#@cherrypy_cors.tools.expose()
-	@cherrypy.tools.json_out()
+	@cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
 	@cherrypy.tools.json_in(force=False)
 	def query(self):
 		try:
 			ids = cherrypy.request.json
 		except:
 			pass
-		print "IDs:", ids
+		print "INPUT:", ids
 		ret = []
 
 		for el in ids:
@@ -29,6 +29,7 @@ class Server(object):
 			except Exception as e:
 				print("ERROR: ", e)
 				ret.append({})
+		print "RETURN:", ret
 		return ret
 
 def CORS():
