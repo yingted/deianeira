@@ -7,7 +7,7 @@ uri = "http://checkit.regionofwaterloo.ca/"
 meta = open("meta.csv", "w")
 meta.write("uuid|title|address|phone_number\n")
 infractions = open("infractions.csv", "w")
-infractions.write("uuid|date|inspection_type|certified_food_handler_on_site|non_critical_infractions|critical_infractions\n")
+infractions.write("uuid|date|inspection_type|certified_food_handler_on_site|non_critical_infractions|critical_infractions|url\n")
 
 br = mechanize.Browser()
 br.open(uri + "portal/Facility")
@@ -35,6 +35,7 @@ while(cont):
 			info_pages.append(link)
 
 	for page in info_pages:
+		link = page.url
 		uuid = page.url.split("/")[-1]
 		try:
 			raw_page = br.follow_link(page)
@@ -61,13 +62,14 @@ while(cont):
 					certified_food_handler_on_site = raw_infractions[i+2].getText()
 					non_critical_infractions = raw_infractions[i+3].getText()
 					critical_infractions = raw_infractions[i+4].getText()
-					infractions.write("{0}|{1}|{2}|{3}|{4}|{5}\n".format(
+					infractions.write("{0}|{1}|{2}|{3}|{4}|{5}|{6}\n".format(
 						uuid,
 						date,
 						inspection_type,
 						certified_food_handler_on_site,
 						non_critical_infractions,
-						critical_infractions
+						critical_infractions,
+						uri.rstrip("/") + link
 					))
 				except:
 					print "INFRACTION ERROR:", uuid
