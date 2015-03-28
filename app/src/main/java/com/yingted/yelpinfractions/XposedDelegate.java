@@ -5,7 +5,12 @@ import android.app.Fragment;
 import android.database.DataSetObserver;
 import android.os.Bundle;
 import android.text.Html;
+import android.text.Spannable;
+import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.method.LinkMovementMethod;
+import android.text.style.URLSpan;
+import android.text.style.UnderlineSpan;
 import android.util.LruCache;
 import android.view.View;
 import android.view.ViewGroup;
@@ -172,7 +177,7 @@ public class XposedDelegate implements IXposedHookLoadPackage {
                         final String textString = obj.optString("text");
                         infraction.color = obj.optInt("color");
                         if (infraction.html = obj.optBoolean("html"))
-                            infraction.text = Html.fromHtml(textString);
+                            infraction.text = withoutUnderlines((Spannable) Html.fromHtml(textString));
                         else
                             infraction.text = textString;
                         infraction.complete();
@@ -184,6 +189,18 @@ public class XposedDelegate implements IXposedHookLoadPackage {
         });
         return infractions;
     }
+
+    private static Spannable withoutUnderlines(final Spannable spannable) {
+        for (final URLSpan span : spannable.getSpans(0, spannable.length(), URLSpan.class))
+            spannable.setSpan(new UnderlineSpan() {
+                @Override
+                public void updateDrawState(final TextPaint paint) {
+                    paint.setUnderlineText(false);
+                }
+            }, spannable.getSpanStart(span), spannable.getSpanEnd(span), 0);
+        return spannable;
+    }
+
     private void updateInfractionsView(final TextView view, final String id) throws Throwable {
         view.setText("");
         view.setTextColor(0);
