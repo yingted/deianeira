@@ -16,26 +16,22 @@ def get_business_id(business_id):
 	return data
 
 class Match:
-	green = 0xff99cc00
-	yellow = 0xffffbb33
-	red = 0xffff4444
-
 	def __init__(self):
-		conns_raw = open("../data_munger/matcher/conn.csv", "r")
-		conns_raw.readline()
-		conns_dict = {}
-		for conn in conns_raw.readlines():
-			tokens = [el.strip().decode("utf-8") for el in conn.split("|")]
-			conns_dict[tokens[1]] = tokens[0]
-		self.conns = conns_dict
+		with open("../data_munger/matcher/conn.csv", "r") as conns_raw:
+			conns_raw.readline()
+			conns_dict = {}
+			for conn in conns_raw.readlines():
+				tokens = [el.strip().decode("utf-8") for el in conn.split("|")]
+				conns_dict[tokens[1]] = tokens[0]
+			self.conns = conns_dict
 
-		infra_raw = open("../data_munger/importer/infractions.csv", "r")
-		infra_raw.readline()
-		infra_dict = {}
-		for infra in infra_raw.readlines():
-			tokens = [el.strip().decode("utf-8") for el in infra.split("|")]
-			infra_dict[tokens[0]] = tokens[1:]
-		self.infractions = infra_dict
+		with open("../data_munger/importer/infractions.csv", "r") as infra_raw:
+			infra_raw.readline()
+			infra_dict = {}
+			for infra in infra_raw.readlines():
+				tokens = [el.strip().decode("utf-8") for el in infra.split("|")]
+				infra_dict[tokens[0]] = tokens[1:]
+			self.infractions = infra_dict
 
 	def get_obj(self, raw_id):
 		try:
@@ -47,18 +43,15 @@ class Match:
 		if business_id in self.conns.keys():
 			uuid = self.conns[business_id]
 			infras = self.infractions[uuid]
-			color = self.green
+			link = infras[-1]
 			text = u'\U0001f604'.encode('utf-8')
-			if int(infras[-1]) > 0:
+			if int(infras[3]) > 0:
 				text = u'\U0001f631'.encode('utf-8')
-				color = self.red
-			elif int(infras[-2]) > 0:
+			elif int(infras[4]) > 0:
 				text = u'\U0001f628'.encode('utf-8')
-				color = self.yellow
 			ret = {
-				'text': "<a href='http://www.google.com/'>{0}</a>".format(text),
+				'text': "<a href='{0}'>{1}</a>".format(link,text),
 				'html': True,
-				'color': 0 
 			}
 			return ret
 		else:
@@ -66,6 +59,6 @@ class Match:
 			ret = {
 				'text': text,
 				'html': False,
-				'color': 0xff000000 
+				'color': 0xff000000
 			}
 			return ret
