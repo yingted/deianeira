@@ -1,4 +1,4 @@
-import util
+from .. import util
 import urllib2
 import contextlib
 import codecs

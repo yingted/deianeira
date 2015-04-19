@@ -4,7 +4,9 @@ import rauth
 import urllib2
 import re
 import sys
+import util
 
+@util.cache
 def search_yelp(params):
 	keys = Blueprint()
 	consumer_key = keys.consumer_key
@@ -21,6 +23,7 @@ def search_yelp(params):
 
 	return data
 
+@util.cache
 def get_business_id(name, address, phone):
 		phone = ''.join(re.findall('\d+', phone))
 		params = {
