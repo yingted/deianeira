@@ -6,6 +6,7 @@ import types
 import matcher
 import util
 import cherrypy
+import urllib
 def _run_matcher(conn):
 	print 'running matcher'
 	for rowid, name, address, phone in conn.execute("SELECT rowid, name, address, phone FROM extractions WHERE business_id IS NULL"):
