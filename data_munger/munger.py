@@ -3,7 +3,6 @@ import importers
 import sqlite3
 import contextlib
 import types
-import os.path
 import matcher
 import util
 def _run_matcher(conn):
@@ -39,7 +38,7 @@ def main():
 		for name, importer in importers.__dict__.iteritems():
 			if isinstance(importer, types.ModuleType):
 				for rec in importer.get_records():
-					conn.execute("INSERT INTO extractions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (
+					conn.execute("INSERT INTO extractions VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", (
 						name,
 						rec.id,
 						rec.name,
