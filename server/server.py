@@ -22,7 +22,7 @@ def get_business_id(business_id):
 
 	return data
 
-def get_obj(self, raw_id):
+def get_obj(raw_id):
 	try:
 		business_id = get_business_id(raw_id).encode("utf-8").decode("utf-8")
 		row = munger.get_row_by_business_id(business_id)
@@ -59,7 +59,7 @@ class Server(object):
 	@cherrypy.expose
 	@cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
 	@cherrypy.tools.json_in(force=False)
-	def query(self):
+	def query(self, ids=[]):
 		try:
 			ids = cherrypy.request.json
 		except:
@@ -70,7 +70,6 @@ class Server(object):
 		for el in ids:
 			try:
 				business_id = get_obj(el)
-
 				ret.append()
 			except Exception as e:
 				print("ERROR: ", e)
