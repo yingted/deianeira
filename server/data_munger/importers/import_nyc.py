@@ -1,4 +1,4 @@
-import util
+from .. import util
 import urllib2
 import contextlib
 import codecs
@@ -7,6 +7,7 @@ import pandas.io.parsers
 import datetime
 import numpy as np
 import cStringIO as StringIO
+import cgi
 @util.cache
 def fetch_raw():
 	with contextlib.closing(urllib2.urlopen('https://nycopendata.socrata.com/api/views/xx67-kt59/rows.csv?accessType=DOWNLOAD&bom=true')) as f:
@@ -41,3 +42,5 @@ def get_records():
 			url=None,
 			data=None,
 		)
+def render(row):
+	return '<h1>JSON</h1><p>%s</p>' % cgi.escape(str(row))

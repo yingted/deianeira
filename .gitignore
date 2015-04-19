@@ -9,3 +9,5 @@ blueprint.py
 /build
 venv
 out
+server/data_munger/cache
+*.db
