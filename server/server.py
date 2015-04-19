@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import cherrypy
 import cherrypy_cors
-import match
 import data_munger.munger as munger
 import data_munger.util as util
 import traceback
@@ -52,9 +51,6 @@ def get_obj(self, raw_id):
 	return ret
 
 class Server(object):
-	def __init__(self):
-		object.__init__(self)
-		self.matcher = match.Match()
 
 	@cherrypy.expose
 	def index(self):
