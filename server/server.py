@@ -69,8 +69,7 @@ class Server(object):
 
 		for el in ids:
 			try:
-				business_id = get_obj(el)
-				ret.append()
+				ret.append(get_obj(el))
 			except Exception as e:
 				print("ERROR: ", e)
 				ret.append({})
