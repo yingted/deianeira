@@ -1,6 +1,9 @@
 import cherrypy
 import cherrypy_cors
 import match
+from .. import data_munger
+
+0()
 
 class Server(object):
 	def __init__(self):
@@ -12,7 +15,6 @@ class Server(object):
 		return "Hello World!"
 
 	@cherrypy.expose
-	#@cherrypy_cors.tools.expose()
 	@cherrypy.tools.json_out(content_type='application/json; charset=utf-8')
 	@cherrypy.tools.json_in(force=False)
 	def query(self):

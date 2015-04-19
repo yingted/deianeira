@@ -1,6 +1,9 @@
+from __future__ import absolute_import
 from blueprint import Blueprint
 import rauth
+from .. import data_munger
 
+@util.cache
 def get_business_id(business_id):
 	keys = Blueprint()
 	consumer_key = keys.consumer_key
