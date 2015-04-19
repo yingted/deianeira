@@ -81,12 +81,12 @@ def install_app():
 def get_row_by_business_id(business_id):
 	with _get_row_conn() as conn:
 		for row in conn.execute("SELECT * FROM extractions WHERE business_id=?", (business_id,)):
-			if row.url is None:
-				row.url = cherrypy.url('/render/', qs=urllib.urlencode({
-					'kind': row.importer,
-					'id': row.id,
+			if row['url'] is None:
+				row['url'] = cherrypy.url('/render/', qs=urllib.urlencode({
+					'kind': row['importer'],
+					'id': row['id'],
 				}))
-				print 'made url', row.url, 'for', cherrypy.request.base
+				print 'made url', row['url'], 'for', cherrypy.request.base
 			return row
 		else:
 			raise KeyError(business_id)
