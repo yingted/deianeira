@@ -6,12 +6,6 @@ import types
 import os.path
 import matcher
 import util
-@util.cache
-def _fetch_import(importer):
-	return importer.do_import()
-def _handle_importer(conn, name, importer):
-	print 'import', name, 'using', importer
-	cached = _fetch_import(importer)
 def _run_matcher(conn):
 	print 'running matcher'
 	for rowid, name, address, phone in conn.execute("SELECT rowid, name, address, phone FROM extractions WHERE business_id IS NULL"):
@@ -27,10 +21,6 @@ def _get_conn():
 		yield conn
 def main():
 	with _get_conn() as conn:
-		items = []
-		for name, importer in importers.__dict__.iteritems():
-			if isinstance(importer, types.ModuleType):
-				items.append((name, importer, _fetch_import(importer)))
 		conn.execute("DROP TABLE IF EXISTS extractions")
 		conn.execute("""
 			CREATE TABLE extractions(
@@ -46,19 +36,20 @@ def main():
 				PRIMARY KEY(importer ASC, id ASC)
 			)
 		""")
-		for name, importer, data in items:
-			for rec in importer.extract(data):
-				conn.execute("INSERT INTO extractions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (
-					name,
-					rec.id,
-					rec.name,
-					rec.address,
-					rec.phone,
-					rec.grade,
-					rec.url,
-					rec.data,
-					None,
-				))
+		for name, importer in importers.__dict__.iteritems():
+			if isinstance(importer, types.ModuleType):
+				for rec in importer.get_records():
+					conn.execute("INSERT INTO extractions VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (
+						name,
+						rec.id,
+						rec.name,
+						rec.address,
+						rec.phone,
+						rec.grade,
+						rec.url,
+						rec.data,
+						None,
+					))
 		_run_matcher(conn)
 if __name__ == '__main__':
 	main()

@@ -7,7 +7,6 @@ Record = collections.namedtuple((
 	'address',
 	'phone',
 	'grade',
-	'phone',
 	'url',
 	'data',
 ))
