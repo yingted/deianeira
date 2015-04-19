@@ -66,7 +66,7 @@ def main():
 		_run_matcher(conn)
 class Renderer(object):
 	@cherrypy.expose
-	@cherrypy.tools.response_headers([('Content-Type', 'text/html')])
+	@cherrypy.tools.response_headers(headers=[('Content-Type', 'text/html')])
 	def index(self, kind, id):
 		if kind not in _importer_dict:
 			raise cherrypy.NotFound()

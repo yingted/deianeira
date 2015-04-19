@@ -1,4 +1,4 @@
-import util
+from .. import util
 import mechanize
 from BeautifulSoup import BeautifulSoup as bs
 
