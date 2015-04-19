@@ -41,3 +41,5 @@ def get_records():
 			url=None,
 			data=None,
 		)
+def render(row):
+	pass
