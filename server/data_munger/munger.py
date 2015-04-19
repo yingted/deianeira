@@ -21,11 +21,16 @@ def _get_conn():
 	with contextlib.closing(sqlite3.connect('deianeira.db')) as conn:
 		conn.text_factory = str
 		yield conn
+def dict_factory(cursor, row): # from docs
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 @contextlib.contextmanager
 def _get_row_conn():
 	with _get_conn() as conn:
 		old_row_factory = conn.row_factory
-		conn.row_factory = sqlite3.Row
+		conn.row_factory = dict_factory
 		yield conn
 		conn.row_factory = old_row_factory
 def _importer_items():
