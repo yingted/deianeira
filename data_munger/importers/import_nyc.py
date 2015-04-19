@@ -14,7 +14,6 @@ def fetch_raw():
 def _parse_dates(dates):
 	return np.fromiter((datetime.datetime.strptime(date, '%m/%d/%Y') for date in dates), dtype='datetime64[us]')
 def get_records():
-	#sys.setdefaultencoding('UTF-8')
 	with contextlib.closing(StringIO.StringIO(fetch_raw())) as in_f:
 		with codecs.getreader('utf-8-sig')(in_f) as inp:
 			df = pd.io.parsers.read_csv(inp, converters={
@@ -28,7 +27,6 @@ def get_records():
 	df.drop_duplicates('CAMIS', take_last=True, inplace=True)
 	df.reset_index(inplace=True)
 	df['address'] = df[['STREET', 'BORO', 'ZIPCODE']].apply('%(STREET)s %(BORO)s %(ZIPCODE)05.f'.__mod__, axis=1, raw=False)
-	#out.writerow(('uuid', 'title', 'address', 'phone_number', 'grade'))
 	for i, row in df.iterrows():
 		try:
 			phone = '%.f' % float(row['PHONE'])

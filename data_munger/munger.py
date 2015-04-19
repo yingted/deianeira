@@ -17,6 +17,7 @@ def _run_matcher(conn):
 @contextlib.contextmanager
 def _get_conn():
 	with contextlib.closing(sqlite3.connect('deianeira.db')) as conn:
+		conn.text_factory = str
 		yield conn
 def main():
 	with _get_conn() as conn:
@@ -49,6 +50,7 @@ def main():
 						rec.data,
 						None,
 					))
+				conn.commit()
 		_run_matcher(conn)
 if __name__ == '__main__':
 	main()
