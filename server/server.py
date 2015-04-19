@@ -40,15 +40,12 @@ def get_obj(raw_id):
 			'html': True,
 		}
 		return ret
+	except KeyError:
+		pass
 	except:
 		traceback.print_exc()
-	text = u'😐'
-	ret = {
-		'text': text.encode('utf-8'),
-		'html': False,
-		'color': 0xff000000
-	}
-	return ret
+
+	return {}
 
 class Server(object):
 
