@@ -30,10 +30,10 @@ def get_obj(raw_id):
 		link = row['url']
 		if grade == 'A':
 			text = u'😄'
-		elif grade == 'C':
-			text = u'😱'
 		elif grade == 'B':
 			text = u'😨'
+		elif grade == 'C':
+			text = u'😱'
 		else:
 			text = u'😐'
 		ret = {
