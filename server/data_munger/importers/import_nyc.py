@@ -8,6 +8,7 @@ import datetime
 import numpy as np
 import cStringIO as StringIO
 import cgi
+import sys
 @util.cache
 def fetch_raw():
 	with contextlib.closing(urllib2.urlopen('https://nycopendata.socrata.com/api/views/xx67-kt59/rows.csv?accessType=DOWNLOAD&bom=true')) as f:
@@ -45,7 +46,13 @@ def get_records():
 		)
 def render(row):
 	df = pd.DataFrame.from_dict(row.data)
-	df_html = df.to_html()
+	colwidth_option = 'max_colwidth'
+	old_colwidth = pd.get_option(colwidth_option)
+	try:
+		pd.set_option(colwidth_option, sys.maxint)
+		df_html = df.to_html()
+	finally:
+		pd.set_option(colwidth_option, old_colwidth)
 	title_html = '%s (%s)' % (cgi.escape(row.name), cgi.escape(row.address))
 	return '''\
 <!DOCTYPE html>
