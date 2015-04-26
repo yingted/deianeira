@@ -26,13 +26,14 @@ def get_obj(raw_id):
 	try:
 		business_id = get_business_id(raw_id).encode("utf-8").decode("utf-8")
 		row = munger.get_row_by_business_id(business_id)
-		link = row.url
-		if row.grade == 'A':
+		grade = row['grade']
+		link = row['url']
+		if grade == 'A':
 			text = u'😄'
-		elif row.grade == 'C':
-			text = u'😱'
-		elif row.grade == 'B':
+		elif grade == 'B':
 			text = u'😨'
+		elif grade == 'C':
+			text = u'😱'
 		else:
 			text = u'😐'
 		ret = {
