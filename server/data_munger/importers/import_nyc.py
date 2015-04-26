@@ -20,6 +20,7 @@ def get_records():
 			df = pd.io.parsers.read_csv(inp, converters={
 				'STREET': str.strip,
 			})
+	df_by_camis = df.set_index('CAMIS')
 	df = df[~df.GRADE.isnull()]
 	df = df[df['GRADE DATE'] <= df['GRADE DATE']]
 	df['GRADE DATE'] = _parse_dates(df['GRADE DATE'])
@@ -40,7 +41,21 @@ def get_records():
 			phone=phone,
 			grade=row['GRADE'],
 			url=None,
-			data=None,
+			data=df_by_camis.loc[row['CAMIS']].to_dict(),
 		)
 def render(row):
-	return '<h1>JSON</h1><p>%s</p>' % cgi.escape(str(row))
+	df = pd.DataFrame.from_dict(row.data)
+	df_html = df.to_html()
+	title_html = '%s (%s)' % (cgi.escape(row.name), cgi.escape(row.address))
+	return '''\
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>%(title_html)s</title>
+	</head>
+	<body>
+		<h1>%(title_html)s</h1>
+		%(df_html)s
+	</body>
+</html>
+''' % locals()
